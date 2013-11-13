@@ -13,9 +13,13 @@ module HTTParty
   class Request
     alias_method :parse_response_without_hack, :parse_response
     def parse_response(body)
-      Rails.logger.info("RESPONSE>")
-      Rails.logger.info(body)
-      Rails.logger.info("<RESPONSE")
+      begin
+        Rails.logger.info("RESPONSE>")
+        Rails.logger.info(body)
+        Rails.logger.info("<RESPONSE")
+      rescue Exception => e
+        puts "Rails logger failure: #{e.inspect}"
+      end
 
       parse_response_without_hack(
         body.sub(/xmlns=("|')(www.envmgr.com|LabelServer.Endicia.com)/, 'xmlns=\1https://\2'))
@@ -433,7 +437,24 @@ module Endicia
       end
     end
 
-    @defaults || {}
+    @defaults ||= {}
+
+    @defaults.merge!(environment_overrides)
+  end
+
+  # Prefer to keep credentials in env vars than in YAML, so here we are:
+  def self.environment_overrides
+    mappings = {
+      "ENDICIA_ACCOUNT_ID"   => "AccountID",
+      "ENDICIA_REQUESTER_ID" => "RequesterID",
+      "ENDICIA_PASSPHRASE"   => "PassPhrase" }
+
+    mappings.each_with_object({}) { |(k,v), memo|
+      unless (val = ENV[k].to_s.strip).empty?
+        val = val.to_i if k.include?("ACCOUNT_ID")
+        memo[v.to_sym] = val
+      end
+    }
   end
 
   def self.parse_result(result, root)
