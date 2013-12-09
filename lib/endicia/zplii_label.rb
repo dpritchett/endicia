@@ -7,6 +7,8 @@ module Endicia
   class LabelError < Exception; end
 
   class ZPLIILabel < Label
+    attr_reader :tracking_number
+
     def initialize(result)
       self.response_body = filter_response_body(result.body.dup)
       data               = result["LabelRequestResponse"] || {}
@@ -16,7 +18,8 @@ module Endicia
         raise LabelError, (data["ErrorMessage"] || result.body.to_s)
       end
 
-      @image      = Base64.decode64 encoded_zpl
+      @tracking_number   = data["TrackingNumber"]
+      @image             = Base64.decode64 encoded_zpl
     end
   end
 end
