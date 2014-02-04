@@ -149,6 +149,49 @@ module Endicia
     parse_result(result, "ChangePassPhraseRequestResponse")
   end
 
+  # Calculate Postage Rate and Fees
+  #
+  # Accepts a hash of options in the form:
+  #
+  #     { :Name => "value", ... }
+  #
+  # See https://app.sgizmo.com/users/4508/Endicia_Label_Server.pdf Table 8-1
+  # for available/required options.
+  #
+  # Note: options should be specified in a "flat" hash, they should not be
+  # formated to fit the nesting of the XML.
+  #
+  # If you are using rails, any applicable options specified in
+  # config/endicia.yml will be used as defaults. For example:
+  #
+  #     development:
+  #       Test: YES
+  #       AccountID: 123
+  #       ...
+  #
+  # Returns a hash in the form:
+  #
+  #     {
+  #       :success => true, # or false
+  #       :error_message => "the message", # or nil
+  #       :response_body => "the response body"
+  #     }
+  def self.get_postage_rate(options = {})
+    xml = Builder::XmlMarkup.new
+    body = "postageRateRequestXML=" + xml.PostageRateRequest do |xml|
+      authorize_request(xml, options)
+      xml.MailClass(options[:MailClass] || defaults[:MailClass])
+      xml.WeightOz(options[:WeightOz] || defaults[:WeightOz])
+      xml.FromPostalCode(options[:FromPostalCode] || defaults[:FromPostalCode])
+      xml.ToPostalCode(options[:ToPostalCode] || defaults[:ToPostalCode])
+      xml.ResponseOptions { |xml| xml.PostagePrice(true) }
+    end
+
+    url = "#{label_service_url(options)}/CalculatePostageRateXML"
+    result = self.post(url, { :body => body })
+    parse_result(result, "PostageRatesResponse")
+  end
+
   # Add postage to your account (submit a RecreditRequest). This is a required
   # step to move to production use after requesting an account and changing
   # your pass phrase.
