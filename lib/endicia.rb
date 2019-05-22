@@ -69,13 +69,14 @@ module Endicia
   #
   # Returns a Endicia::Label object.
   def self.get_label(opts={})
-    opts = defaults.merge(opts)
+    customs = opts[:customs]
+    opts = defaults.merge(opts.except(:customs))
     opts[:Test] ||= "NO"
     url = "#{label_service_url(opts)}/GetPostageLabelXML"
     insurance = extract_insurance(opts)
     handle_extended_zip_code(opts)
 
-    root_keys = :LabelType, :Test, :LabelSize, :ImageFormat, :ImageResolution
+    root_keys = :LabelType, :LabelSubtype, :Test, :LabelSize, :ImageFormat, :ImageResolution
     root_attributes = extract(opts, root_keys)
     root_attributes[:LabelType] ||= "Default"
 
@@ -86,6 +87,21 @@ module Endicia
     body = "labelRequestXML=" + xml.LabelRequest(root_attributes) do |xm|
       opts.each { |key, value| xm.tag!(key, value) }
       xm.Services({ :InsuredMail => insurance }) if insurance
+      unless customs.nil?
+        xm.tag!('ToCountryCode', customs[:ToCountryCode])
+        xm.CustomsInfo do |ci|
+          ci.tag!('ContentsType', customs[:ContentsType])
+          ci.CustomsItems do |citems|
+            customs[:CustomsItems].each do |item|
+              citems.CustomsItem do |citem|
+                item.each { |key, value| citem.tag!(key, value) }
+              end
+            end
+          end
+        end
+        xm.tag!('CustomsCertify', customs[:CustomsCertify])
+        xm.tag!('CustomsSigner', customs[:CustomsSigner])
+      end
       unless mailpiece_dimenions.empty?
         xm.MailpieceDimensions do |md|
           mailpiece_dimenions.each { |key, value| md.tag!(key, value) }
