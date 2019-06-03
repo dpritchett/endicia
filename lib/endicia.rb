@@ -70,6 +70,7 @@ module Endicia
   # Returns a Endicia::Label object.
   def self.get_label(opts={})
     customs = opts[:customs]
+    @international = !customs.nil?
     opts = defaults.merge(opts.except(:customs))
     opts[:Test] ||= "NO"
     url = "#{label_service_url(opts)}/GetPostageLabelXML"
@@ -460,11 +461,17 @@ module Endicia
 
   # Prefer to keep credentials in env vars than in YAML, so here we are:
   def self.environment_overrides
-    mappings = {
-      "ENDICIA_ACCOUNT_ID"   => "AccountID",
-      "ENDICIA_REQUESTER_ID" => "RequesterID",
-      "ENDICIA_PASSPHRASE"   => "PassPhrase" }
-
+    if @international
+      mappings = {
+        "ENDICIA_ACCOUNT_ID_INTERNATIONAL"   => "AccountID",
+        "ENDICIA_REQUESTER_ID" => "RequesterID",
+        "ENDICIA_PASSPHRASE_INTERNATIONAL"   => "PassPhrase" }
+    else
+      mappings = {
+        "ENDICIA_ACCOUNT_ID"   => "AccountID",
+        "ENDICIA_REQUESTER_ID" => "RequesterID",
+        "ENDICIA_PASSPHRASE"   => "PassPhrase" }
+    end
     mappings.each_with_object({}) { |(k,v), memo|
       unless (val = ENV[k].to_s.strip).empty?
         val = val.to_i if k.include?("ACCOUNT_ID")
