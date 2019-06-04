@@ -18,17 +18,15 @@ module Endicia
         raise LabelError, (data["ErrorMessage"] || result.body.to_s)
       end
 
-      if encoded_zpl.is_a?(String)
-        decoded_zpl = Base64.decode64(encoded_zpl)
-      elsif encoded_zpl.is_a?(Array)
-        decoded_zpl = data["Label"]["Image"].map{|label| Base64.decode64(label["__content__"])}.join("")
+      if encoded_zpl.is_a?(Array)
+        encoded_zpl = data["Label"]["Image"].map{|label| label["__content__"]}.join("&:surlysquid:&")
       elsif encoded_zpl.is_a?(Hash)
-        decoded_zpl = Base64.decode64(data["Label"]["Image"]["__content__"])
+        encoded_zpl = data["Label"]["Image"]["__content__"]
       end
 
 
       @tracking_number   = data["TrackingNumber"]
-      @image             = decoded_zpl
+      @image             = encoded_zpl
     end
   end
 end
