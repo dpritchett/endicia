@@ -70,11 +70,12 @@ module Endicia
   # Returns a Endicia::Label object.
   def self.get_label(opts={})
     customs = opts[:customs]
-    @international = !customs.nil?
-    opts = defaults.merge(opts.except(:customs))
+    @international = !customs.nil? || opts[:InsuredValue]
+    services = opts[:Services]
+    opts = defaults.merge(opts.except(:customs, :Services))
     opts[:Test] ||= "NO"
     url = "#{label_service_url(opts)}/GetPostageLabelXML"
-    insurance = extract_insurance(opts)
+    # extract_insurance(opts)
     handle_extended_zip_code(opts)
 
     root_keys = :LabelType, :LabelSubtype, :Test, :LabelSize, :ImageFormat, :ImageResolution
@@ -87,7 +88,7 @@ module Endicia
     xml = Builder::XmlMarkup.new
     body = "labelRequestXML=" + xml.LabelRequest(root_attributes) do |xm|
       opts.each { |key, value| xm.tag!(key, value) }
-      xm.Services({ :InsuredMail => insurance }) if insurance
+      xm.Services(services) if services
       unless customs.nil?
         xm.tag!('ToCountryCode', customs[:ToCountryCode])
         xm.CustomsInfo do |ci|
@@ -499,7 +500,7 @@ module Endicia
   # Handle special case where jewelry can't have insurance if sent to certain zips
   def self.extract_insurance(opts)
     jewelry = opts.delete(:Jewelry)
-    opts.delete(:InsuredMail).tap do |insurance|
+    opts[:Services].delete(:InsuredMail).tap do |insurance|
       if insurance && insurance == "Endicia" && jewelry
         if JEWELRY_INSURANCE_EXCLUDED_ZIPS.include? opts[:ToPostalCode]
           raise InsuranceError, "Can't ship jewelry with insurance to #{opts[:ToPostalCode]}"
