@@ -14,14 +14,11 @@ module Endicia
                   :cost_center,
                   :request_body,
                   :request_url,
-                  :response_body
+                  :response_body,
+                  :requester_id
     def initialize(result)
       self.response_body = filter_response_body(result.body.dup)
-      data = result["LabelRequestResponse"] || {}
-      data.each do |k, v|
-        k = "image" if k == 'Base64LabelImage'
-        send(:"#{k.tableize.singularize}=", v) if !k['xmlns']
-      end
+      self.image = result["LabelRequestResponse"]["Base64LabelImage"]
     end
     
     private
