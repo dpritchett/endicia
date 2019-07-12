@@ -48,6 +48,26 @@ module Endicia
   # example XML
   # <LabelRequest><ReturnAddress1>884 Railroad Street, Suite C</ReturnAddress1><ReturnCity>Ypsilanti</ReturnCity><ReturnState>MI</ReturnState><FromPostalCode>48197</FromPostalCode><FromCity>Ypsilanti</FromCity><FromState>MI</FromState><FromCompany>VGKids</FromCompany><ToPostalCode>48197</ToPostalCode><ToAddress1>1237 Elbridge St</ToAddress1><ToCity>Ypsilanti</ToCity><ToState>MI</ToState><PartnerTransactionID>123</PartnerTransactionID><PartnerCustomerID>71212</PartnerCustomerID><MailClass>MediaMail</MailClass><Test>YES</Test><RequesterID>poopants</RequesterID><AccountID>792190</AccountID><PassPhrase>whiplash1</PassPhrase><WeightOz>10</WeightOz></LabelRequest>
 
+  # Request rates.
+  def self.get_rates(opts={})
+    @international = opts[:MailClass] == 'International'
+    creds = defaults
+    url = "#{label_service_url(opts)}/CalculatePostageRatesXML"
+
+    xml = Builder::XmlMarkup.new
+    body = "postageRatesRequestXML=" + xml.PostageRatesRequest do |xm|
+      xm.tag!('RequesterID', creds[:RequesterID])
+      xm.CertifiedIntermediary do |ci|
+        ci.tag!('AccountID', creds[:AccountID])
+        ci.tag!('PassPhrase', creds[:PassPhrase])
+      end
+      opts.except(:Test).each { |key, value| xm.tag!(key, value) }
+    end
+
+    result = self.post(url, :body => body)
+    result["PostageRatesResponse"]
+  end
+
   # Request a shipping label.
   #
   # Accepts a hash of options in the form:
